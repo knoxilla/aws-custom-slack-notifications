@@ -18,7 +18,7 @@ const table = new AWS.DynamoDB.DocumentClient(dynamoOptions);
 
 // variable declaration
 var timeStamp = null, accountId = null, clusterName = null, containerName = null, currentState = null, desiredState = null, taskId = null, stateCount = null, taskName = null, taskVersion = null, lastKnownStoppedCount = null, lastKnownPendingCount = null;
-var postEachRunning = false;
+var postEachRunning = true;
 
 // functions
 function setVariables(time, account, cluster, container, state, desired, task){
@@ -46,7 +46,7 @@ function countAmountOfTimesAdded(data, task, state){
     if(data.Items[i].task === task && data.Items[i].state === state){
       stateCount = data.Items[i].count+1;
       break;
-    } 
+    }
   }
   return stateCount;
 }
@@ -115,7 +115,7 @@ function postEveryRunningMessage(context,data){
                 "mrkdwn_in": ["text", "pretext"],
                 "text": "_Task *" + containerName + "* has deployed successfully and is running version *" + taskId + "*._",
                 "color": '#33cc33',
-                "footer": "New task deployed successfully"     
+                "footer": "New task deployed successfully"
             }
         ]
       });
@@ -162,7 +162,7 @@ function postUpdatedMessage(context, data){
               "mrkdwn_in": ["text", "pretext"],
               "text": "_Task *" + containerName + "* is now able to run on version *" + taskId + "* and has now reached it's desired state *" + desiredState + "*._",
               "color": '#33cc33',
-              "footer": "New task version deployed successfully"     
+              "footer": "New task version deployed successfully"
           }
       ]
     });
@@ -205,7 +205,7 @@ function postErrorMessage(context){
             "mrkdwn_in": ["text", "pretext"],
             "text": "_Looks like task *" + containerName + "*, tagged as *" + taskId + "*, keeps restarting. This happened in cluster *" + clusterName + "* at timestamp *" + timeStamp + "*._",
             "color": '#ff3300',
-            "footer": "Task is flapping"     
+            "footer": "Task is flapping"
         }
     ]
   });
@@ -245,10 +245,10 @@ function assignCorrectId(data, task, state){
   }
   return id;
 }
-  
+
 function putData(task, state, count, data, context){
   var id = assignCorrectId(data,task,state);
-  postUpdatedMessage(context, data); 
+  postUpdatedMessage(context, data);
   var paramsPut = {
     TableName:process.env.TABLE,
     Item:{
@@ -309,11 +309,11 @@ function delayedActions(context){
   };
   table.scan(paramsScan, (err, data) => {
     if(countAmountOfTimesAdded(data, taskId, 'STOPPED') === 5)
-      if(isCurrentPendingAndDesiredRunning()) 
-        postErrorMessage(context); 
+      if(isCurrentPendingAndDesiredRunning())
+        postErrorMessage(context);
     if(postEachRunning) postEveryRunningMessage(context, data);
     // check all the tasks with same name
-    // get the stopped & running 
+    // get the stopped & running
     // check if after delay the stopped count is still the same as the running count
     // if the count is still the same delete everything related to that task
     statesWithSameTaskId = data.Items.filter(i => i.task === taskId);
@@ -346,12 +346,12 @@ module.exports.run = (event, context, callback) => {
   // match the variables with the corresponding values from event (cloudwatch)
   setVariables(event.time, event.account, event.detail.clusterArn, event.detail.containers[0].name, event.detail.lastStatus, event.detail.desiredStatus, event.detail.taskDefinitionArn);
   // scan the table for current contents
-  table.scan(getScanParams(), (err, data) => {  
+  table.scan(getScanParams(), (err, data) => {
     if(checkMatchingStates(data, desiredState, currentState, taskId)){
       var statesWithSameTaskId = data.Items.filter(i => i.task === taskId);
       var stoppedCount = statesWithSameTaskId.filter(i => i.state === 'STOPPED').map(i => i.count);
       // write the data to the dynamo table, but only when the stopped is not going over 5, saving us costs if it keeps flapping -> timeout = longer = larger cost
-      if(stoppedCount[0] <= 4 || stoppedCount.length === 0) putData(taskId, currentState, countAmountOfTimesAdded(data, taskId, currentState), data, context); 
-    } 
+      if(stoppedCount[0] <= 4 || stoppedCount.length === 0) putData(taskId, currentState, countAmountOfTimesAdded(data, taskId, currentState), data, context);
+    }
   });
 };

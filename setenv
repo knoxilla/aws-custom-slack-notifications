@@ -1,0 +1,2 @@
+
+$(credstash get tknox.aws-ecs-slack-notifications.dev)

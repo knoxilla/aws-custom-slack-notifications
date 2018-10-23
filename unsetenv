@@ -1,0 +1,8 @@
+# always be tidying up
+
+unset AWS_DYNAMO
+unset SLACK_WEBHOOK_URL
+unset TABLE
+unset AUTHOR
+unset AUTHOR_URL
+unset AUTHOR_IMG
